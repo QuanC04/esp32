@@ -39,11 +39,6 @@
                     <div id="deviceName" style="color: var(--primary-color); font-weight: 600; font-size: 0.95rem;">
                     </div>
                     <div id="userEmail" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
-                    <button id="testNotificationBtn" class="btn btn-small"
-                        style="border: 1px solid var(--primary-color); background: transparent; color: var(--primary-color);"
-                        title="Test notification">
-                        🔔 Test
-                    </button>
                     <button id="changeDeviceBtn" class="btn btn-small"
                         style="border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);">
                         Đổi thiết bị
@@ -381,20 +376,6 @@
 
                 // Display device name
                 document.getElementById('deviceName').textContent = device.name;
-            }
-        });
-
-        // Test Notification
-        document.getElementById('testNotificationBtn').addEventListener('click', async () => {
-            const { sendDangerAlert } = await import('./notification-helper.js');
-
-            // Test gas alert
-            const sent = await sendDangerAlert('gas', { gas: 850 });
-
-            if (sent) {
-                alert('✅ Thông báo test đã được gửi! Kiểm tra góc màn hình.');
-            } else {
-                alert('❌ Không thể gửi thông báo. Vui lòng kiểm tra quyền notification.');
             }
         });
 
