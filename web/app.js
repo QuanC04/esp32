@@ -374,9 +374,9 @@ function hideDangerPopup() {
 // =====================================================
 // Initialize
 // =====================================================
-function init() {
+async function init() {
   // Load device configuration
-  const selectedDevice = getSelectedDevice();
+  const selectedDevice = await getSelectedDevice();
   if (selectedDevice) {
     // Update state with device config
     state.brokerUrl = selectedDevice.brokerUrl;
