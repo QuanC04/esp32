@@ -354,26 +354,24 @@
     <script type="module" src="app.js"></script>
     <script type="module">
         import { onAuthChange, logoutUser } from './auth.js';
-        import { hasSelectedDevice, getSelectedDevice } from './device-manager.js';
+        import { getSelectedDevice } from './device-manager.js';
 
         // Check Auth and Device Selection
-        onAuthChange((user) => {
+        onAuthChange(async (user) => {
             if (!user) {
                 window.location.href = 'login.html';
             } else {
                 document.getElementById('userEmail').textContent = user.email;
 
-                // Check if device is selected
-                if (!hasSelectedDevice()) {
+                // Check if device is selected and fetch it
+                const device = await getSelectedDevice();
+                if (!device) {
                     window.location.href = 'devices.html';
                     return;
                 }
 
                 // Display device name
-                const device = getSelectedDevice();
-                if (device) {
-                    document.getElementById('deviceName').textContent = device.name;
-                }
+                document.getElementById('deviceName').textContent = device.name;
             }
         });
 

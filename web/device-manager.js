@@ -190,9 +190,9 @@ export function getSelectedDeviceId() {
 
 /**
  * Get the currently selected device object
- * @returns {object|null} Selected device object or null
+ * @returns {Promise<object|null>} Selected device object or null
  */
-export function getSelectedDevice() {
+export async function getSelectedDevice() {
   const selectedId = getSelectedDeviceId();
   if (!selectedId) return null;
 
@@ -200,7 +200,9 @@ export function getSelectedDevice() {
   const cachedDevice = devicesCache.find((d) => d.id === selectedId);
   if (cachedDevice) return cachedDevice;
 
-  return null;
+  // Cache is empty, fetch from Firestore
+  const devices = await getDevices();
+  return devices.find((d) => d.id === selectedId) || null;
 }
 
 /**
