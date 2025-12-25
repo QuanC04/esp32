@@ -397,9 +397,6 @@ async function init() {
     // Update UI
     elements.brokerUrl.value = selectedDevice.brokerUrl;
 
-    // Request notification permission
-    await requestNotificationPermission();
-
     // Auto-connect
     addLog(`Đang kết nối tới ${selectedDevice.name}...`, "info");
     connectMQTT();
