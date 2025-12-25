@@ -3,7 +3,7 @@
  * Handles Firestore operations for multi-device management
  */
 
-import { auth, db } from "../config/firebase.js";
+import { auth, db } from "./firebase-config.js";
 import {
   collection,
   addDoc,
