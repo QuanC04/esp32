@@ -1,0 +1,8 @@
+{
+	"scripts": {
+		"start": "npx -y http-server . -c-1"
+	},
+	"dependencies": {
+		"firebase": "^12.7.0"
+	}
+}

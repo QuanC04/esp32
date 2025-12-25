@@ -1,0 +1,14 @@
+[wokwi]
+version = 1
+
+# Enable Serial Monitor
+serial = true
+
+# Firmware configuration cho Arduino framework
+firmware = "sketch.ino"
+
+# Library dependencies - Wokwi sẽ tự download
+[dependencies]
+"LiquidCrystal I2C" = "1.1.2"
+"ESP32Servo" = "0.13.0"
+"ArduinoJson" = "6.21.0"

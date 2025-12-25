@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ESP32 IoT Control Panel - Monitor and control your ESP32 devices">
+    <title>ESP32 Control Panel</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ESP32 Panel">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    <h1>ESP32 Control Panel</h1>
+                </div>
+                <div class="header-right" style="display: flex; gap: 1rem; align-items: center;">
+                    <div id="deviceName" style="color: var(--primary-color); font-weight: 600; font-size: 0.95rem;">
+                    </div>
+                    <div id="userEmail" style="color: var(--text-secondary); font-size: 0.9rem;"></div>
+                    <button id="changeDeviceBtn" class="btn btn-small"
+                        style="border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);">
+                        Đổi thiết bị
+                    </button>
+                    <button id="logoutBtn" class="btn btn-small"
+                        style="border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);">
+                        Đăng xuất
+                    </button>
+                </div>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Đang kết nối...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Server Config -->
+            <section class="config-section">
+                <div class="config-card">
+                    <label for="brokerUrl">MQTT Broker:</label>
+                    <div class="input-group">
+                        <input type="text" id="brokerUrl" value="wss://broker.emqx.io:8084/mqtt"
+                            placeholder="wss://broker.emqx.io:8084/mqtt">
+                        <button class="btn btn-primary" id="connectBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                            Kết nối
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sensors Grid -->
+            <section class="section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24" />
+                    </svg>
+                    Cảm biến
+                </h2>
+                <div class="cards-grid">
+                    <!-- LCD Display -->
+                    <div class="card card-wide">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" />
+                                <path d="M8 21h8M12 17v4" />
+                            </svg>
+                            <span>LCD Display</span>
+                        </div>
+                        <div class="lcd-display" id="lcdDisplay">
+                            <div class="lcd-line" id="lcdLine1">ESP32 Ready</div>
+                            <div class="lcd-line" id="lcdLine2">Wokwi Gateway</div>
+                        </div>
+                    </div>
+
+                    <!-- MQ2 Gas Sensor -->
+                    <div class="card">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
+                            <span>MQ2 - Khí Gas</span>
+                        </div>
+                        <div class="sensor-value">
+                            <span class="value" id="gasValue">0</span>
+                            <span class="unit">ppm</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="gasProgress" style="width: 0%"></div>
+                        </div>
+                        <div class="sensor-status" id="gasStatus">
+                            <span class="status-badge status-safe">An toàn</span>
+                        </div>
+                    </div>
+
+
+                </div>
+            </section>
+
+            <!-- Controls Grid -->
+            <section class="section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    Điều khiển
+                </h2>
+                <div class="cards-grid">
+                    <!-- Auto Mode Control -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
+                            <span>Chế độ Tự động</span>
+                        </div>
+                        <div class="control-status" id="autoStatus">BẬT</div>
+                        <button class="toggle-btn" id="autoToggle" data-state="on">
+                            <span class="toggle-slider"></span>
+                        </button>
+                    </div>
+
+                    <!-- Fan Control -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 12c-3-3-3-7.5 0-7.5s6 3 6 6-3 6-6 6-6-3-6-6 3-6 6-6" />
+                                <circle cx="12" cy="12" r="2" />
+                            </svg>
+                            <span>Quạt hút (Gas)</span>
+                        </div>
+                        <div class="control-status" id="fanStatus">TẮT</div>
+                        <button class="toggle-btn" id="fanToggle" data-state="off">
+                            <span class="toggle-slider"></span>
+                        </button>
+                    </div>
+
+                    <!-- Pump Control -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M12 2v6M12 22v-6M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M2 12h6M22 12h-6M4.93 19.07l4.24-4.24M14.83 9.17l4.24-4.24" />
+                            </svg>
+                            <span>Máy bơm (Lửa)</span>
+                        </div>
+                        <div class="control-status" id="pumpStatus">TẮT</div>
+                        <button class="toggle-btn" id="pumpToggle" data-state="off">
+                            <span class="toggle-slider"></span>
+                        </button>
+                    </div>
+
+                    <!-- Buzzer Control -->
+                    <div class="card control-card">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            </svg>
+                            <span>Còi báo động</span>
+                        </div>
+                        <div class="control-status" id="buzzerStatus">TẮT</div>
+                        <button class="toggle-btn" id="buzzerToggle" data-state="off">
+                            <span class="toggle-slider"></span>
+                        </button>
+                    </div>
+
+
+
+                    <!-- Servo Control -->
+                    <div class="card control-card card-wide">
+                        <div class="card-header">
+                            <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3" />
+                                <path d="M12 1v6M12 17v6" />
+                            </svg>
+                            <span>Servo Motor</span>
+                        </div>
+                        <div class="servo-control">
+                            <div class="servo-value">
+                                <span id="servoValue">90</span>°
+                            </div>
+                            <input type="range" class="servo-slider" id="servoSlider" min="0" max="180" value="90">
+                            <div class="servo-labels">
+                                <span>0°</span>
+                                <span>90°</span>
+                                <span>180°</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Activity Log -->
+            <section class="section">
+                <h2 class="section-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    Nhật ký hoạt động
+                </h2>
+                <div class="log-card">
+                    <div class="log-content" id="logContent">
+                        <div class="log-entry log-info">
+                            <span class="log-time">--:--:--</span>
+                            <span class="log-message">Đang chờ kết nối với ESP32...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>ESP32 Control Panel • MQTT WebSocket</p>
+        </footer>
+
+        <!-- Danger Popup Overlay -->
+        <div id="dangerPopup" class="danger-popup" style="display: none;">
+            <div class="danger-popup-content">
+                <div class="danger-icon">⚠️</div>
+                <h2 id="dangerTitle">CẢNH BÁO!</h2>
+                <p id="dangerMessage">Phát hiện tình huống nguy hiểm!</p>
+                <button id="dangerDismissBtn" class="btn btn-danger">Đã hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .danger-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .danger-popup-content {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.5);
+            animation: pulse 1s ease infinite;
+            max-width: 400px;
+        }
+
+        .danger-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .danger-popup-content h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+        }
+
+        .danger-popup-content p {
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .btn-danger {
+            background: white;
+            color: #cc0000;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-danger:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+
+    <script src="/sw-register.js"></script>
+    <script type="module" src="app.js"></script>
+    <script type="module">
+        import { onAuthChange, logoutUser } from './auth.js';
+        import { hasSelectedDevice, getSelectedDevice } from './device-manager.js';
+
+        // Check Auth and Device Selection
+        onAuthChange((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('userEmail').textContent = user.email;
+
+                // Check if device is selected
+                if (!hasSelectedDevice()) {
+                    window.location.href = 'devices.html';
+                    return;
+                }
+
+                // Display device name
+                const device = getSelectedDevice();
+                if (device) {
+                    document.getElementById('deviceName').textContent = device.name;
+                }
+            }
+        });
+
+        // Change Device
+        document.getElementById('changeDeviceBtn').addEventListener('click', () => {
+            window.location.href = 'devices.html';
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await logoutUser();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+
+</html>

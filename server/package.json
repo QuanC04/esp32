@@ -1,0 +1,13 @@
+{
+  "name": "esp32-iot-server",
+  "version": "1.0.0",
+  "description": "ESP32 IoT Gateway Server - bridges ESP32 and Web Client",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  }
+}

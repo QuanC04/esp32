@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý thiết bị - ESP32 Control</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ESP32 Panel">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .devices-container {
+            min-height: 100vh;
+            background-color: var(--bg-primary);
+            padding: 2rem;
+        }
+
+        .devices-header {
+            max-width: 1200px;
+            margin: 0 auto 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .devices-title {
+            color: var(--text-primary);
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .devices-title svg {
+            width: 2rem;
+            height: 2rem;
+            color: var(--primary-color);
+        }
+
+        .devices-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .devices-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .devices-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .device-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .device-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .device-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .device-info h3 {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .device-info p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin: 0;
+            font-family: monospace;
+        }
+
+        .device-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .add-device-form {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .form-title {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 1.5rem 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            min-width: auto;
+        }
+
+        .btn-danger {
+            background-color: #dc2626;
+        }
+
+        .btn-danger:hover {
+            background-color: #b91c1c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 4rem;
+            height: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .user-info {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="devices-container">
+        <div class="devices-header">
+            <h1 class="devices-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                </svg>
+                Quản lý thiết bị
+            </h1>
+            <div class="user-info">
+                <span id="userEmail"></span>
+                <button id="logoutBtn" class="btn btn-small"
+                    style="border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);">
+                    Đăng xuất
+                </button>
+            </div>
+        </div>
+
+        <div class="devices-content">
+            <div class="devices-list" id="devicesList">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    <p>Chưa có thiết bị nào. Thêm thiết bị đầu tiên của bạn →</p>
+                </div>
+            </div>
+
+            <div class="add-device-form">
+                <h2 class="form-title">Thêm thiết bị mới</h2>
+                <form id="addDeviceForm">
+                    <div class="form-group">
+                        <label class="form-label" for="deviceName">Tên thiết bị</label>
+                        <input type="text" id="deviceName" class="form-input" required placeholder="VD: Phòng khách">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="brokerUrl">MQTT Broker URL</label>
+                        <input type="text" id="brokerUrl" class="form-input" required
+                            value="wss://broker.emqx.io:8084/mqtt" placeholder="wss://broker.emqx.io:8084/mqtt">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="topicStatus">Topic trạng thái</label>
+                        <input type="text" id="topicStatus" class="form-input" required value="esp32/iot/status"
+                            placeholder="esp32/iot/status">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="topicCommands">Topic lệnh điều khiển</label>
+                        <input type="text" id="topicCommands" class="form-input" required value="esp32/iot/commands"
+                            placeholder="esp32/iot/commands">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Thêm thiết bị
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/sw-register.js"></script>
+    <script type="module">
+        import { onAuthChange, logoutUser } from './auth.js';
+        import { getDevices, addDevice, removeDevice, selectDevice } from './device-manager.js';
+
+        // Check Auth
+        onAuthChange((user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('userEmail').textContent = user.email;
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await logoutUser();
+            window.location.href = 'login.html';
+        });
+
+        // Render devices list
+        function renderDevices() {
+            const devices = getDevices();
+            const devicesList = document.getElementById('devicesList');
+
+            if (devices.length === 0) {
+                devicesList.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                            <path d="M2 17l10 5 10-5" />
+                            <path d="M2 12l10 5 10-5" />
+                        </svg>
+                        <p>Chưa có thiết bị nào. Thêm thiết bị đầu tiên của bạn →</p>
+                    </div>
+                `;
+                return;
+            }
+
+            devicesList.innerHTML = devices.map(device => `
+                <div class="device-card">
+                    <div class="device-card-header">
+                        <div class="device-info">
+                            <h3>${device.name}</h3>
+                            <p>${device.brokerUrl}</p>
+                        </div>
+                        <div class="device-actions">
+                            <button class="btn btn-primary btn-small" onclick="connectToDevice('${device.id}')">
+                                Kết nối
+                            </button>
+                            <button class="btn btn-danger btn-small btn-icon" onclick="deleteDevice('${device.id}')" title="Xóa">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Add device
+        document.getElementById('addDeviceForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('deviceName').value;
+            const brokerUrl = document.getElementById('brokerUrl').value;
+            const topicStatus = document.getElementById('topicStatus').value;
+            const topicCommands = document.getElementById('topicCommands').value;
+
+            addDevice(name, brokerUrl, topicStatus, topicCommands);
+
+            // Clear form
+            e.target.reset();
+            document.getElementById('brokerUrl').value = 'wss://broker.emqx.io:8084/mqtt';
+            document.getElementById('topicStatus').value = 'esp32/iot/status';
+            document.getElementById('topicCommands').value = 'esp32/iot/commands';
+
+            renderDevices();
+        });
+
+        // Connect to device
+        window.connectToDevice = (id) => {
+            if (selectDevice(id)) {
+                window.location.href = 'index.html';
+            }
+        };
+
+        // Delete device
+        window.deleteDevice = (id) => {
+            if (confirm('Bạn có chắc muốn xóa thiết bị này?')) {
+                removeDevice(id);
+                renderDevices();
+            }
+        };
+
+        // Initial render
+        renderDevices();
+    </script>
+</body>
+
+</html>
