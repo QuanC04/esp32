@@ -20,6 +20,7 @@ const NETWORK_FIRST_URLS = [
   "/auth.js",
   "/device-manager.js",
   "/firebase-config.js",
+  "/notification-helper.js",
   "/sw-register.js",
 ];
 
@@ -184,4 +185,38 @@ self.addEventListener("message", (event) => {
       })
     );
   }
+});
+
+// =====================================================
+// Notification Handlers
+// =====================================================
+
+// Handle notification click - open the app
+self.addEventListener("notificationclick", (event) => {
+  console.log("[Service Worker] Notification clicked:", event.notification.tag);
+
+  event.notification.close();
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // If app is already open, focus it
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && "focus" in client) {
+            return client.focus();
+          }
+        }
+
+        // Otherwise, open new window
+        if (clients.openWindow) {
+          return clients.openWindow("/");
+        }
+      })
+  );
+});
+
+// Handle notification close
+self.addEventListener("notificationclose", (event) => {
+  console.log("[Service Worker] Notification closed:", event.notification.tag);
 });

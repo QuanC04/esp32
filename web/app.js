@@ -4,6 +4,10 @@
  */
 
 import { getSelectedDevice } from "./device-manager.js";
+import {
+  requestNotificationPermission,
+  sendDangerAlert,
+} from "./notification-helper.js";
 
 // =====================================================
 // Configuration & State
@@ -343,6 +347,13 @@ function checkDangerCondition(data) {
 
   if (isDanger && !state.dangerDismissed) {
     showDangerPopup(data);
+
+    // Send push notification
+    if (data.isFire) {
+      sendDangerAlert("fire", data);
+    } else if (data.gas > 700) {
+      sendDangerAlert("gas", data);
+    }
   }
 
   // Reset dismissed state when danger is over
@@ -385,6 +396,9 @@ async function init() {
 
     // Update UI
     elements.brokerUrl.value = selectedDevice.brokerUrl;
+
+    // Request notification permission
+    await requestNotificationPermission();
 
     // Auto-connect
     addLog(`Đang kết nối tới ${selectedDevice.name}...`, "info");
