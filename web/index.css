@@ -725,12 +725,31 @@ body::before {
 }
 
 /* =====================================================
-   Responsive
+   Responsive - Mobile First
    ===================================================== */
-@media (max-width: 768px) {
+
+/* Tablet & Medium Screens (≤968px) */
+@media (max-width: 968px) {
+  html {
+    font-size: 15px;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
   .header-content {
-    flex-direction: column;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .header-right {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+  }
+
+  .main {
+    padding: 1.25rem;
   }
 
   .config-card {
@@ -744,63 +763,323 @@ body::before {
   }
 
   .cards-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sensor-value .value {
-    font-size: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   }
 }
 
-@media (max-width: 480px) {
-  .main {
-    padding: 1rem;
+/* Mobile & Small Screens (≤640px) */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  .header {
+    padding: 0.75rem 1rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .logo {
+    justify-content: center;
   }
 
   .logo h1 {
     font-size: 1.125rem;
   }
 
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header-right {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  #deviceName {
+    order: -1;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 0.5rem;
+  }
+
+  #userEmail {
+    font-size: 0.8rem !important;
+    flex: 1;
+  }
+
+  .connection-status {
+    width: 100%;
+    justify-content: center;
+    padding: 0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .main {
+    padding: 1rem;
+  }
+
+  .config-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .config-card {
+    padding: 1rem;
+  }
+
+  .input-group {
+    gap: 0.5rem;
+  }
+
+  .input-group input {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .btn-small {
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+  }
+
+  .section {
+    margin-bottom: 1.5rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    margin-bottom: 0.875rem;
+  }
+
+  .section-title svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
   .card {
     padding: 1rem;
   }
-}
 
-/* =====================================================
-   Animations
-   ===================================================== */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+  .card-wide {
+    grid-column: span 1;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .card-header {
+    font-size: 0.9375rem;
+  }
+
+  .card-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* LCD Display */
+  .lcd-display {
+    padding: 0.875rem 1rem;
+  }
+
+  .lcd-line {
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  /* Sensor Values */
+  .sensor-value .value {
+    font-size: 2rem;
+  }
+
+  .sensor-value .unit {
+    font-size: 0.9375rem;
+  }
+
+  /* Control Cards */
+  .control-status {
+    font-size: 1rem;
+  }
+
+  /* Toggle Button - Touch friendly */
+  .toggle-btn {
+    width: 80px;
+    height: 44px;
+    border-radius: 22px;
+  }
+
+  .toggle-slider {
+    width: 32px;
+    height: 32px;
+    top: 4px;
+    left: 4px;
+  }
+
+  .toggle-btn[data-state="on"] .toggle-slider {
+    left: calc(100% - 36px);
+  }
+
+  /* Servo Control */
+  .servo-value {
+    font-size: 2rem;
+  }
+
+  .servo-slider {
+    height: 10px;
+  }
+
+  .servo-slider::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  .servo-slider::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Activity Log */
+  .log-content {
+    max-height: 150px;
+    font-size: 0.8125rem;
+  }
+
+  .log-entry {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .log-time {
+    font-size: 0.75rem;
+  }
+
+  .footer {
+    padding: 1rem;
+    font-size: 0.8125rem;
   }
 }
 
-.card {
-  animation: fadeIn 0.4s ease backwards;
+/* Extra Small Screens (≤380px) */
+@media (max-width: 380px) {
+  html {
+    font-size: 13px;
+  }
+
+  .header {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .main {
+    padding: 0.875rem;
+  }
+
+  .config-card,
+  .card {
+    padding: 0.875rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+  }
+
+  .sensor-value .value {
+    font-size: 1.75rem;
+  }
+
+  .servo-value {
+    font-size: 1.75rem;
+  }
 }
 
-.cards-grid .card:nth-child(1) {
-  animation-delay: 0.05s;
+/* Touch Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .btn-primary:hover,
+  .btn-demo:hover {
+    transform: none;
+  }
+
+  .card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Make interactive elements more obvious */
+  .btn,
+  .toggle-btn {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Increase touch target sizes */
+  .btn {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .toggle-btn {
+    width: 84px;
+    height: 48px;
+  }
+
+  .toggle-slider {
+    width: 36px;
+    height: 36px;
+  }
+
+  .toggle-btn[data-state="on"] .toggle-slider {
+    left: calc(100% - 40px);
+  }
+
+  /* Improve scrolling */
+  .log-content {
+    -webkit-overflow-scrolling: touch;
+  }
 }
-.cards-grid .card:nth-child(2) {
-  animation-delay: 0.1s;
+
+/* Landscape Mobile */
+@media (max-width: 968px) and (orientation: landscape) {
+  .header-content {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .connection-status {
+    width: auto;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
 }
-.cards-grid .card:nth-child(3) {
-  animation-delay: 0.15s;
-}
-.cards-grid .card:nth-child(4) {
-  animation-delay: 0.2s;
-}
-.cards-grid .card:nth-child(5) {
-  animation-delay: 0.25s;
-}
-.cards-grid .card:nth-child(6) {
-  animation-delay: 0.3s;
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .card {
+    border-width: 0.5px;
+  }
+
+  .status-badge {
+    border-width: 0.5px;
+  }
 }
 
 /* Reduced motion */

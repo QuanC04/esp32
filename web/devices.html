@@ -259,7 +259,9 @@
     <script src="/sw-register.js"></script>
     <script type="module">
         import { onAuthChange, logoutUser } from './auth.js';
-        import { getDevices, addDevice, removeDevice, selectDevice } from './device-manager.js';
+        import { subscribeToDevices, addDevice, removeDevice, selectDevice } from './device-manager.js';
+
+        let unsubscribe = null;
 
         // Check Auth
         onAuthChange((user) => {
@@ -267,18 +269,23 @@
                 window.location.href = 'login.html';
             } else {
                 document.getElementById('userEmail').textContent = user.email;
+
+                // Subscribe to real-time device updates
+                unsubscribe = subscribeToDevices((devices) => {
+                    renderDevices(devices);
+                });
             }
         });
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
+            if (unsubscribe) unsubscribe();
             await logoutUser();
             window.location.href = 'login.html';
         });
 
         // Render devices list
-        function renderDevices() {
-            const devices = getDevices();
+        function renderDevices(devices) {
             const devicesList = document.getElementById('devicesList');
 
             if (devices.length === 0) {
@@ -319,7 +326,7 @@
         }
 
         // Add device
-        document.getElementById('addDeviceForm').addEventListener('submit', (e) => {
+        document.getElementById('addDeviceForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const name = document.getElementById('deviceName').value;
@@ -327,15 +334,30 @@
             const topicStatus = document.getElementById('topicStatus').value;
             const topicCommands = document.getElementById('topicCommands').value;
 
-            addDevice(name, brokerUrl, topicStatus, topicCommands);
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Đang thêm...';
 
-            // Clear form
-            e.target.reset();
-            document.getElementById('brokerUrl').value = 'wss://broker.emqx.io:8084/mqtt';
-            document.getElementById('topicStatus').value = 'esp32/iot/status';
-            document.getElementById('topicCommands').value = 'esp32/iot/commands';
+            const result = await addDevice(name, brokerUrl, topicStatus, topicCommands);
 
-            renderDevices();
+            if (result) {
+                // Clear form
+                e.target.reset();
+                document.getElementById('brokerUrl').value = 'wss://broker.emqx.io:8084/mqtt';
+                document.getElementById('topicStatus').value = 'esp32/iot/status';
+                document.getElementById('topicCommands').value = 'esp32/iot/commands';
+            } else {
+                alert('Không thể thêm thiết bị. Vui lòng thử lại.');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Thêm thiết bị
+            `;
         });
 
         // Connect to device
@@ -346,16 +368,13 @@
         };
 
         // Delete device
-        window.deleteDevice = (id) => {
+        window.deleteDevice = async (id) => {
             if (confirm('Bạn có chắc muốn xóa thiết bị này?')) {
-                removeDevice(id);
-                renderDevices();
+                await removeDevice(id);
             }
         };
-
-        // Initial render
-        renderDevices();
     </script>
 </body>
 
 </html>
+```
