@@ -102,11 +102,11 @@ export async function sendDangerAlert(type, data = {}) {
   let title, body, tag;
 
   if (type === "fire") {
-    title = "🔥 PHÁT HIỆN LỬA!";
+    title = "PHÁT HIỆN LỬA!";
     body = "Cảm biến phát hiện có lửa! Vui lòng kiểm tra ngay!";
     tag = "fire-alert";
   } else if (type === "gas") {
-    title = "⚠️ RÒ RỈ KHÍ GAS!";
+    title = "RÒ RỈ KHÍ GAS!";
     body = `Nồng độ gas: ${data.gas || "N/A"} ppm (Ngưỡng nguy hiểm: 700 ppm)`;
     tag = "gas-alert";
   } else {

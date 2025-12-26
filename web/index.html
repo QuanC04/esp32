@@ -18,6 +18,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <link rel="stylesheet" href="index.css">
 </head>
@@ -260,9 +264,22 @@
         <!-- Danger Popup Overlay -->
         <div id="dangerPopup" class="danger-popup" style="display: none;">
             <div class="danger-popup-content">
-                <div class="danger-icon">⚠️</div>
+                <div class="danger-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </div>
                 <h2 id="dangerTitle">CẢNH BÁO!</h2>
                 <p id="dangerMessage">Phát hiện tình huống nguy hiểm!</p>
+
+                <!-- Location Map -->
+                <div id="dangerMapContainer" class="danger-map"></div>
+                <div id="dangerLocationInfo" class="danger-location-info"></div>
+
                 <button id="dangerDismissBtn" class="btn btn-danger">Đã hiểu</button>
             </div>
         </div>
@@ -317,8 +334,15 @@
         }
 
         .danger-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem auto;
+        }
+
+        .danger-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: white;
         }
 
         .danger-popup-content h2 {
@@ -348,7 +372,91 @@
             transform: scale(1.05);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
+
+        /* Danger Map Styles */
+        .danger-map {
+            width: 100%;
+            height: 180px;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+        }
+
+        .danger-location-info {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+
+        .danger-location-info .device-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .danger-location-info .coordinates {
+            font-family: monospace;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* Custom Leaflet Marker Styles */
+        .danger-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .marker-pin {
+            width: 40px;
+            height: 40px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .marker-pin.fire {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+        }
+
+        .marker-pin.gas {
+            background: linear-gradient(135deg, #ffaa00, #ff6600);
+        }
+
+        .marker-pin span {
+            transform: rotate(45deg);
+            font-size: 18px;
+        }
+
+        .map-popup {
+            text-align: center;
+            padding: 0.25rem;
+        }
+
+        .map-popup .alert-type {
+            font-weight: 600;
+            display: block;
+            margin: 0.25rem 0;
+        }
+
+        .map-popup .alert-type.fire {
+            color: #cc0000;
+        }
+
+        .map-popup .alert-type.gas {
+            color: #ff6600;
+        }
+
+        .map-popup .gas-value {
+            color: #ff6600;
+            font-weight: 500;
+        }
     </style>
+
+    <!-- Leaflet JS for maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script src="/sw-register.js"></script>
     <script type="module" src="app.js"></script>
@@ -356,6 +464,7 @@
         import { onAuthChange, logoutUser } from './auth.js';
         import { getSelectedDevice } from './device-manager.js';
         import { requestNotificationPermission } from './notification-helper.js';
+        import { connectWithDevice } from './app.js';
 
         // Check Auth and Device Selection
         onAuthChange(async (user) => {
@@ -376,6 +485,9 @@
 
                 // Display device name
                 document.getElementById('deviceName').textContent = device.name;
+
+                // Auto-connect MQTT with device config
+                await connectWithDevice(device, user.uid);
             }
         });
 

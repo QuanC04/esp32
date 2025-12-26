@@ -5,8 +5,14 @@
 
 const http = require("http");
 const WebSocket = require("ws");
+const { sendDangerPushDebounced } = require("./fcm-service");
 
 const PORT = 8080;
+
+// Danger detection thresholds
+const DANGER_THRESHOLDS = {
+  gas: 700, // ppm
+};
 
 // Current device state (received from ESP32 or set by web client)
 let deviceState = {
@@ -18,6 +24,7 @@ let deviceState = {
   relay: false,
   led: false,
   servo: 90,
+  isFire: false,
   lcd: {
     line1: "ESP32 Ready",
     line2: "Waiting...",
@@ -60,7 +67,7 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && url === "/esp/status") {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
+    req.on("end", async () => {
       try {
         const data = JSON.parse(body);
 
@@ -71,7 +78,19 @@ const server = http.createServer((req, res) => {
         if (data.pump !== undefined) deviceState.pump = data.pump;
         if (data.buzzer !== undefined) deviceState.buzzer = data.buzzer;
         if (data.servo !== undefined) deviceState.servo = data.servo;
+        if (data.isFire !== undefined) deviceState.isFire = data.isFire;
         if (data.lcd) deviceState.lcd = data.lcd;
+
+        // Check for danger conditions and send push notification
+        if (data.isFire === true) {
+          console.log("[DANGER] Fire detected! Sending push notification...");
+          sendDangerPushDebounced("fire", data);
+        } else if (data.gas !== undefined && data.gas > DANGER_THRESHOLDS.gas) {
+          console.log(
+            `[DANGER] Gas level ${data.gas} > ${DANGER_THRESHOLDS.gas}! Sending push...`
+          );
+          sendDangerPushDebounced("gas", { gas: data.gas });
+        }
 
         // Broadcast to all WebSocket clients
         broadcastState();

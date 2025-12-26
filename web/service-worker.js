@@ -191,6 +191,41 @@ self.addEventListener("message", (event) => {
 // Notification Handlers
 // =====================================================
 
+// Handle push messages from FCM (works when app is closed!)
+self.addEventListener("push", (event) => {
+  console.log("[Service Worker] Push received:", event);
+
+  let data = {};
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { notification: { title: "Thông báo", body: event.data.text() } };
+    }
+  }
+
+  const notification = data.notification || {};
+  const title = notification.title || "⚠️ Cảnh báo ESP32";
+  const body = notification.body || "Có cảnh báo từ hệ thống giám sát";
+
+  const options = {
+    body,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-96.png",
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true,
+    tag: data.data?.type ? `${data.data.type}-alert` : "fcm-push",
+    data: data.data || {},
+    actions: [
+      { action: "open", title: "Mở ứng dụng" },
+      { action: "dismiss", title: "Bỏ qua" },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
 // Handle notification click - open the app
 self.addEventListener("notificationclick", (event) => {
   console.log("[Service Worker] Notification clicked:", event.notification.tag);

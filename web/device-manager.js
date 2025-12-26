@@ -117,13 +117,17 @@ export function unsubscribeFromDevices() {
  * @param {string} brokerUrl - MQTT broker URL
  * @param {string} topicStatus - Status topic
  * @param {string} topicCommands - Commands topic
+ * @param {number|null} latitude - Device location latitude
+ * @param {number|null} longitude - Device location longitude
  * @returns {Promise<object|null>} The created device object or null
  */
 export async function addDevice(
   name,
   brokerUrl,
   topicStatus = "esp32/iot/status",
-  topicCommands = "esp32/iot/commands"
+  topicCommands = "esp32/iot/commands",
+  latitude = null,
+  longitude = null
 ) {
   const devicesCol = getUserDevicesCollection();
   if (!devicesCol) {
@@ -139,6 +143,14 @@ export async function addDevice(
       topicCommands: topicCommands.trim(),
       createdAt: new Date(),
     };
+
+    // Add location if provided
+    if (latitude !== null && longitude !== null) {
+      newDevice.location = {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+      };
+    }
 
     const docRef = await addDoc(devicesCol, newDevice);
 

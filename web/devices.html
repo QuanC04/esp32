@@ -14,6 +14,9 @@
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
     <style>
@@ -187,6 +190,62 @@
             align-items: center;
             gap: 1rem;
         }
+
+        .location-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .location-section h4 {
+            color: var(--text-primary);
+            font-size: 1rem;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .location-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .location-map-picker {
+            height: 200px;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-location {
+            width: 100%;
+            margin-top: 0.5rem;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-location:hover {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+
+        .device-location {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .device-location svg {
+            width: 14px;
+            height: 14px;
+        }
     </style>
 </head>
 
@@ -244,7 +303,49 @@
                         <input type="text" id="topicCommands" class="form-input" required value="esp32/iot/commands"
                             placeholder="esp32/iot/commands">
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+
+                    <!-- Location Section -->
+                    <div class="location-section">
+                        <h4>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width: 18px; height: 18px;">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            Vị trí thiết bị
+                        </h4>
+                        <div class="location-inputs">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" for="deviceLat">Latitude</label>
+                                <input type="number" id="deviceLat" class="form-input" step="any"
+                                    placeholder="VD: 10.8231">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" for="deviceLng">Longitude</label>
+                                <input type="number" id="deviceLng" class="form-input" step="any"
+                                    placeholder="VD: 106.6297">
+                            </div>
+                        </div>
+                        <button type="button" id="useMyLocationBtn" class="btn btn-location btn-small">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width: 16px; height: 16px;">
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="3" />
+                                <line x1="12" y1="2" x2="12" y2="6" />
+                                <line x1="12" y1="18" x2="12" y2="22" />
+                                <line x1="2" y1="12" x2="6" y2="12" />
+                                <line x1="18" y1="12" x2="22" y2="12" />
+                            </svg>
+                            Sử dụng vị trí của tôi
+                        </button>
+                        <div id="locationMapPicker" class="location-map-picker"></div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                            Nhấp vào bản đồ để chọn vị trí thiết bị
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; justify-content: center; margin-top: 1rem;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19" />
                             <line x1="5" y1="12" x2="19" y2="12" />
@@ -256,12 +357,92 @@
         </div>
     </div>
 
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <script src="/sw-register.js"></script>
     <script type="module">
         import { onAuthChange, logoutUser } from './auth.js';
         import { subscribeToDevices, addDevice, removeDevice, selectDevice } from './device-manager.js';
+        import { getCurrentLocation } from './location-map.js';
 
         let unsubscribe = null;
+        let locationPickerMap = null;
+        let locationMarker = null;
+
+        // Initialize location picker map
+        function initLocationPickerMap() {
+            if (typeof L === 'undefined') return;
+
+            const mapContainer = document.getElementById('locationMapPicker');
+            if (!mapContainer) return;
+
+            // Default to Ho Chi Minh City
+            const defaultLat = 10.8231;
+            const defaultLng = 106.6297;
+
+            locationPickerMap = L.map('locationMapPicker', {
+                center: [defaultLat, defaultLng],
+                zoom: 13
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(locationPickerMap);
+
+            // Add marker
+            locationMarker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(locationPickerMap);
+
+            // Update inputs on marker drag
+            locationMarker.on('dragend', (e) => {
+                const { lat, lng } = e.target.getLatLng();
+                document.getElementById('deviceLat').value = lat.toFixed(6);
+                document.getElementById('deviceLng').value = lng.toFixed(6);
+            });
+
+            // Update marker on map click
+            locationPickerMap.on('click', (e) => {
+                const { lat, lng } = e.latlng;
+                locationMarker.setLatLng([lat, lng]);
+                document.getElementById('deviceLat').value = lat.toFixed(6);
+                document.getElementById('deviceLng').value = lng.toFixed(6);
+            });
+        }
+
+        // Use My Location button
+        document.getElementById('useMyLocationBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('useMyLocationBtn');
+            btn.disabled = true;
+            btn.textContent = 'Đang lấy vị trí...';
+
+            try {
+                const { lat, lng } = await getCurrentLocation();
+                document.getElementById('deviceLat').value = lat.toFixed(6);
+                document.getElementById('deviceLng').value = lng.toFixed(6);
+
+                // Update map
+                if (locationPickerMap && locationMarker) {
+                    locationMarker.setLatLng([lat, lng]);
+                    locationPickerMap.setView([lat, lng], 16);
+                }
+            } catch (error) {
+                alert('Không thể lấy vị trí: ' + error.message);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="12" y1="2" x2="12" y2="6" />
+                    <line x1="12" y1="18" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="6" y2="12" />
+                    <line x1="18" y1="12" x2="22" y2="12" />
+                </svg>
+                Sử dụng vị trí của tôi
+            `;
+        });
 
         // Check Auth
         onAuthChange((user) => {
@@ -274,6 +455,9 @@
                 unsubscribe = subscribeToDevices((devices) => {
                     renderDevices(devices);
                 });
+
+                // Initialize map picker after auth
+                setTimeout(initLocationPickerMap, 100);
             }
         });
 
@@ -302,27 +486,41 @@
                 return;
             }
 
-            devicesList.innerHTML = devices.map(device => `
-                <div class="device-card">
-                    <div class="device-card-header">
-                        <div class="device-info">
-                            <h3>${device.name}</h3>
-                            <p>${device.brokerUrl}</p>
-                        </div>
-                        <div class="device-actions">
-                            <button class="btn btn-primary btn-small" onclick="connectToDevice('${device.id}')">
-                                Kết nối
-                            </button>
-                            <button class="btn btn-danger btn-small btn-icon" onclick="deleteDevice('${device.id}')" title="Xóa">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                </svg>
-                            </button>
+            devicesList.innerHTML = devices.map(device => {
+                const hasLocation = device.location && device.location.latitude && device.location.longitude;
+                const locationHtml = hasLocation ? `
+                    <div class="device-location">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        ${device.location.latitude.toFixed(4)}, ${device.location.longitude.toFixed(4)}
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="device-card">
+                        <div class="device-card-header">
+                            <div class="device-info">
+                                <h3>${device.name}</h3>
+                                <p>${device.brokerUrl}</p>
+                                ${locationHtml}
+                            </div>
+                            <div class="device-actions">
+                                <button class="btn btn-primary btn-small" onclick="connectToDevice('${device.id}')">
+                                    Kết nối
+                                </button>
+                                <button class="btn btn-danger btn-small btn-icon" onclick="deleteDevice('${device.id}')" title="Xóa">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Add device
@@ -333,12 +531,14 @@
             const brokerUrl = document.getElementById('brokerUrl').value;
             const topicStatus = document.getElementById('topicStatus').value;
             const topicCommands = document.getElementById('topicCommands').value;
+            const latitude = document.getElementById('deviceLat').value || null;
+            const longitude = document.getElementById('deviceLng').value || null;
 
             const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Đang thêm...';
 
-            const result = await addDevice(name, brokerUrl, topicStatus, topicCommands);
+            const result = await addDevice(name, brokerUrl, topicStatus, topicCommands, latitude, longitude);
 
             if (result) {
                 // Clear form
@@ -346,6 +546,8 @@
                 document.getElementById('brokerUrl').value = 'wss://broker.emqx.io:8084/mqtt';
                 document.getElementById('topicStatus').value = 'esp32/iot/status';
                 document.getElementById('topicCommands').value = 'esp32/iot/commands';
+                document.getElementById('deviceLat').value = '';
+                document.getElementById('deviceLng').value = '';
             } else {
                 alert('Không thể thêm thiết bị. Vui lòng thử lại.');
             }
@@ -377,4 +579,3 @@
 </body>
 
 </html>
-```

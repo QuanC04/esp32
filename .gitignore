@@ -12,6 +12,7 @@ package-lock.json
 .firebaserc
 firebase-debug.log
 firestore-debug.log
+service-account.json
 
 # Logs
 logs/

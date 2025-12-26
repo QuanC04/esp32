@@ -18,6 +18,8 @@ export async function registerUser(email, password) {
       email,
       password
     );
+    // Save userId for push notification registration
+    sessionStorage.setItem("userId", userCredential.user.uid);
     return { success: true, user: userCredential.user };
   } catch (error) {
     return { success: false, error: error.message };
@@ -36,6 +38,8 @@ export async function loginUser(email, password) {
       email,
       password
     );
+    // Save userId for push notification registration
+    sessionStorage.setItem("userId", userCredential.user.uid);
     return { success: true, user: userCredential.user };
   } catch (error) {
     return { success: false, error: error.message };

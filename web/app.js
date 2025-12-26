@@ -3,11 +3,16 @@
  * Handles MQTT communication with ESP32 via cloud broker
  */
 
-import { getSelectedDevice } from "./device-manager.js";
 import {
   requestNotificationPermission,
   sendDangerAlert,
 } from "./notification-helper.js";
+import { initPushNotifications } from "./push-manager.js";
+import {
+  initDangerMap,
+  showDeviceLocation,
+  destroyMap,
+} from "./location-map.js";
 
 // =====================================================
 // Configuration & State
@@ -39,6 +44,9 @@ const state = {
   sensors: {
     gas: 0,
   },
+
+  // Current device info (for location display)
+  currentDevice: null,
 };
 
 // =====================================================
@@ -54,6 +62,8 @@ const elements = {
   dangerTitle: document.getElementById("dangerTitle"),
   dangerMessage: document.getElementById("dangerMessage"),
   dangerDismissBtn: document.getElementById("dangerDismissBtn"),
+  dangerMapContainer: document.getElementById("dangerMapContainer"),
+  dangerLocationInfo: document.getElementById("dangerLocationInfo"),
 
   // LCD
   lcdLine1: document.getElementById("lcdLine1"),
@@ -363,45 +373,69 @@ function checkDangerCondition(data) {
 }
 
 function showDangerPopup(data) {
+  const alertType = data.isFire ? "fire" : "gas";
+
   if (data.isFire) {
-    elements.dangerTitle.textContent = " PHÁT HIỆN LỬA!";
+    elements.dangerTitle.textContent = "PHÁT HIỆN LỬA!";
     elements.dangerMessage.textContent =
       "Cảm biến phát hiện có lửa! Vui lòng kiểm tra ngay!";
   } else {
-    elements.dangerTitle.textContent = " RÒ RỈ KHÍ GAS!";
+    elements.dangerTitle.textContent = "RÒ RỈ KHÍ GAS!";
     elements.dangerMessage.textContent = `Nồng độ gas: ${data.gas} ppm (Ngưỡng nguy hiểm: 700)`;
   }
 
   elements.dangerPopup.style.display = "flex";
-  addLog(" CẢNH BÁO NGUY HIỂM!", "error");
+  addLog("CẢNH BÁO NGUY HIỂM!", "error");
+
+  // Show location on map if device has location info
+  const device = state.currentDevice;
+  if (
+    device &&
+    device.location &&
+    device.location.latitude &&
+    device.location.longitude
+  ) {
+    const { latitude, longitude } = device.location;
+
+    // Update location info display
+    elements.dangerLocationInfo.innerHTML = `
+      <div class="device-name">📍 ${device.name}</div>
+      <div class="coordinates">${latitude.toFixed(6)}, ${longitude.toFixed(
+      6
+    )}</div>
+    `;
+
+    // Initialize and show map after popup is visible
+    setTimeout(() => {
+      initDangerMap("dangerMapContainer", latitude, longitude);
+      showDeviceLocation(latitude, longitude, device.name, alertType, data);
+    }, 100);
+  } else {
+    // No location data available
+    elements.dangerLocationInfo.innerHTML = `
+      <div style="opacity: 0.7; font-size: 0.85rem;">
+        ⚠️ Chưa có thông tin vị trí thiết bị
+      </div>
+    `;
+    elements.dangerMapContainer.style.display = "none";
+  }
 }
 
 function hideDangerPopup() {
   elements.dangerPopup.style.display = "none";
   state.dangerDismissed = true;
   addLog("Đã xác nhận cảnh báo", "warning");
+
+  // Clean up map
+  destroyMap();
+  elements.dangerMapContainer.style.display = "block";
+  elements.dangerLocationInfo.innerHTML = "";
 }
 
 // =====================================================
-// Initialize
+// Initialize UI (event listeners only)
 // =====================================================
-async function init() {
-  // Load device configuration
-  const selectedDevice = await getSelectedDevice();
-  if (selectedDevice) {
-    // Update state with device config
-    state.brokerUrl = selectedDevice.brokerUrl;
-    state.topics.status = selectedDevice.topicStatus;
-    state.topics.commands = selectedDevice.topicCommands;
-
-    // Update UI
-    elements.brokerUrl.value = selectedDevice.brokerUrl;
-
-    // Auto-connect
-    addLog(`Đang kết nối tới ${selectedDevice.name}...`, "info");
-    connectMQTT();
-  }
-
+function initUI() {
   // Connect button
   elements.connectBtn.addEventListener("click", handleConnect);
   elements.brokerUrl.addEventListener("keypress", (e) => {
@@ -429,13 +463,45 @@ async function init() {
     }, 100);
   });
 
-  // Initialize with demo values for preview
+  // Initialize with default sensor values
   updateGasSensor(0);
+  addLog("Hệ thống sẵn sàng. Đang chờ xác thực...", "info");
+}
 
-  if (!selectedDevice) {
-    addLog("Hệ thống sẵn sàng. Nhấn Kết nối để kết nối MQTT.", "info");
+/**
+ * Connect with device configuration (called after auth is confirmed)
+ * @param {object} device - Device configuration object
+ * @param {string} userId - Current user ID for push notifications
+ */
+export async function connectWithDevice(device, userId) {
+  if (!device) {
+    addLog("Không tìm thấy thiết bị. Vui lòng chọn thiết bị.", "warning");
+    return;
+  }
+
+  // Update state with device config
+  state.brokerUrl = device.brokerUrl;
+  state.topics.status = device.topicStatus;
+  state.topics.commands = device.topicCommands;
+  state.currentDevice = device; // Store for location display
+
+  // Update UI
+  elements.brokerUrl.value = device.brokerUrl;
+
+  // Auto-connect to MQTT
+  addLog(`Đang kết nối tới ${device.name}...`, "info");
+  connectMQTT();
+
+  // Initialize push notifications for FCM
+  if (userId) {
+    try {
+      await initPushNotifications(userId);
+      addLog("Push notifications đã được kích hoạt", "success");
+    } catch (error) {
+      console.warn("[Push] Error initializing push:", error);
+    }
   }
 }
 
-// Start the app
-document.addEventListener("DOMContentLoaded", init);
+// Start the app - only initialize UI
+document.addEventListener("DOMContentLoaded", initUI);
